@@ -4,10 +4,28 @@ venv/
 # Python Cache
 __pycache__/
 *.pyc
+*.db
+*.sqlite3
+*.sh
 
 # Environment Variables (contains your secret API key)
 .env
 
-# Logs
+
+# Flask
+instance/
 logs/
 *.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env.local
+.env.production
