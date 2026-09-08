@@ -16,6 +16,12 @@ def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
     
+    # Log the database URL (without credentials for security)
+    db_url = app.config['SQLALCHEMY_DATABASE_URI']
+    # Mask credentials for logging
+    masked_url = db_url.replace(db_url.split('://')[1].split('@')[0].split(':')[0], '***')
+    app.logger.info(f"Using database: {masked_url}")
+    
     # Initialize extensions
     db.init_app(app)
     bcrypt.init_app(app)
@@ -36,8 +42,8 @@ def create_app():
     )
     
     # Register routes
-    register_routes(app)      # Existing routes (weather, quote, health)
-    register_auth_routes(app) # New auth routes
+    register_routes(app)
+    register_auth_routes(app)
     
     # JWT error handlers
     @jwt.unauthorized_loader
@@ -62,9 +68,9 @@ def create_app():
         app.logger.error(f"Server error: {error}")
         return jsonify({'error': 'Internal server error'}), 500
     
-    # Create tables
+    # Create tables (if they don't exist)
     with app.app_context():
         db.create_all()
-        app.logger.info("Database tables created")
+        app.logger.info("Database tables created/verified")
     
     return app
