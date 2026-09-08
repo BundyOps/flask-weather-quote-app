@@ -3,15 +3,25 @@ A production-ready Flask REST API with JWT authentication, weather data integrat
 
 📋 Table of Contents
 Features
+
 Tech Stack
+
 Project Structure
+
 Installation
+
 Configuration
+
 API Documentation
+
 Authentication Flow
+
 Testing
+
 Deployment
+
 Contributing
+
 License
 
 ✨ Features
