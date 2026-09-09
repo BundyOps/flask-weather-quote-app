@@ -92,13 +92,6 @@ def register_routes(app):
         
         return jsonify(weather_data)
     
-    # Keep crash route only in debug mode
-    if app.debug:
-        @app.route('/crash')
-        def crash():
-            """Intentionally crash to test debugger"""
-            result = 1 / 0
-            return jsonify({'result': result})
     
     @app.route('/favicon.ico')
     def favicon():
