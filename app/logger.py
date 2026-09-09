@@ -60,7 +60,7 @@ def setup_logging(app):
     # 1. Main app log (everything)
     app_handler = logging.handlers.RotatingFileHandler(
         os.path.join(log_dir, 'app.log'),
-        maxBytes=10_000_000,  # 10MB
+        maxBytes=10_000_000,
         backupCount=10
     )
     app_handler.setLevel(log_level)
@@ -69,6 +69,7 @@ def setup_logging(app):
     
     # 2. Access log (requests only)
     access_logger = logging.getLogger('access')
+    access_logger.handlers.clear()
     access_handler = logging.handlers.RotatingFileHandler(
         os.path.join(log_dir, 'access.log'),
         maxBytes=10_000_000,
@@ -81,6 +82,7 @@ def setup_logging(app):
     
     # 3. Security log (auth events)
     security_logger = logging.getLogger('security')
+    security_logger.handlers.clear()
     security_handler = logging.handlers.RotatingFileHandler(
         os.path.join(log_dir, 'security.log'),
         maxBytes=10_000_000,
@@ -93,6 +95,7 @@ def setup_logging(app):
     
     # 4. Business log (weather, quotes)
     business_logger = logging.getLogger('business')
+    business_logger.handlers.clear()
     business_handler = logging.handlers.RotatingFileHandler(
         os.path.join(log_dir, 'business.log'),
         maxBytes=10_000_000,
@@ -105,6 +108,7 @@ def setup_logging(app):
     
     # 5. Auth log (authentication)
     auth_logger = logging.getLogger('auth')
+    auth_logger.handlers.clear()
     auth_handler = logging.handlers.RotatingFileHandler(
         os.path.join(log_dir, 'auth.log'),
         maxBytes=10_000_000,
@@ -117,6 +121,7 @@ def setup_logging(app):
     
     # 6. Error log (errors only)
     error_logger = logging.getLogger('error')
+    error_logger.handlers.clear()
     error_handler = logging.handlers.RotatingFileHandler(
         os.path.join(log_dir, 'error.log'),
         maxBytes=10_000_000,
@@ -148,25 +153,27 @@ def setup_logging(app):
     
     return app.logger
 
-# Helper functions to get loggers
-def get_logger(name='app'):
-    """Get a logger by name"""
-    from flask import current_app
-    if hasattr(current_app, 'config') and 'LOGGERS' in current_app.config:
-        return current_app.config['LOGGERS'].get(name, current_app.logger)
-    return current_app.logger
+def get_logger(app, name='app'):
+    """
+    Get a logger by name.
+    Simply pass the app instance to get the logger.
+    """
+    if 'LOGGERS' in app.config:
+        return app.config['LOGGERS'].get(name, app.logger)
+    return app.logger
 
-def get_access_logger():
-    return get_logger('access')
+# Convenience functions - pass app to these
+def get_access_logger(app):
+    return get_logger(app, 'access')
 
-def get_security_logger():
-    return get_logger('security')
+def get_security_logger(app):
+    return get_logger(app, 'security')
 
-def get_business_logger():
-    return get_logger('business')
+def get_business_logger(app):
+    return get_logger(app, 'business')
 
-def get_auth_logger():
-    return get_logger('auth')
+def get_auth_logger(app):
+    return get_logger(app, 'auth')
 
-def get_error_logger():
-    return get_logger('error')
+def get_error_logger(app):
+    return get_logger(app, 'error')

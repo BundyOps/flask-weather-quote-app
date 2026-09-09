@@ -11,8 +11,15 @@ class Config:
     DEBUG = os.getenv('DEBUG', False)
     
     # Database
-    SQLALCHEMY_DATABASE_URI = os.getenv('DATABASE_URL', 'sqlite:///app.db')
+    SQLALCHEMY_DATABASE_URI = os.getenv('DATABASE_URL')
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+    
+    # PostgreSQL connection pool settings (optional but recommended)
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        'pool_size': 10,
+        'pool_recycle': 3600,
+        'pool_pre_ping': True,
+    }
     
     # Weather API
     WEATHER_API_KEY = os.getenv('WEATHER_API_KEY', '')

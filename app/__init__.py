@@ -2,8 +2,6 @@
 from flask import Flask, jsonify, request, g
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
-from flask_sqlalchemy import SQLAlchemy
-from flask_bcrypt import Bcrypt
 import uuid
 
 from app.config import Config
@@ -26,7 +24,10 @@ def create_app():
     
     # Setup logging
     setup_logging(app)
-    logger = get_logger('app')
+    
+    # Get logger by passing app
+    logger = get_logger(app, 'app')
+    logger.info("Application starting up")
     
     # Request ID middleware
     @app.before_request
@@ -35,10 +36,9 @@ def create_app():
         g.request_id = request_id
         request.request_id = request_id
     
-    # User context middleware (populated by auth)
+    # User context middleware
     @app.before_request
     def set_user_context():
-        # Will be populated by JWT decorator in routes
         request.user_id = None
         request.username = None
     
@@ -49,8 +49,8 @@ def create_app():
     # JWT error handlers
     @jwt.unauthorized_loader
     def unauthorized_response(callback):
-        logger = get_logger('security')
-        logger.warning({
+        sec_logger = get_logger(app, 'security')
+        sec_logger.warning({
             'event': 'UNAUTHORIZED_ACCESS',
             'path': request.path,
             'ip': request.remote_addr,
@@ -60,8 +60,8 @@ def create_app():
     
     @jwt.invalid_token_loader
     def invalid_token_response(callback):
-        logger = get_logger('security')
-        logger.warning({
+        sec_logger = get_logger(app, 'security')
+        sec_logger.warning({
             'event': 'INVALID_TOKEN',
             'path': request.path,
             'ip': request.remote_addr,
@@ -71,8 +71,8 @@ def create_app():
     
     @jwt.expired_token_loader
     def expired_token_response(callback):
-        logger = get_logger('security')
-        logger.warning({
+        sec_logger = get_logger(app, 'security')
+        sec_logger.warning({
             'event': 'EXPIRED_TOKEN',
             'path': request.path,
             'ip': request.remote_addr,
@@ -83,8 +83,8 @@ def create_app():
     # Global error handlers
     @app.errorhandler(404)
     def not_found(error):
-        logger = get_logger('error')
-        logger.error({
+        err_logger = get_logger(app, 'error')
+        err_logger.error({
             'event': 'NOT_FOUND',
             'path': request.path,
             'method': request.method,
@@ -95,8 +95,8 @@ def create_app():
     
     @app.errorhandler(500)
     def internal_error(error):
-        logger = get_logger('error')
-        logger.error({
+        err_logger = get_logger(app, 'error')
+        err_logger.error({
             'event': 'INTERNAL_ERROR',
             'path': request.path,
             'method': request.method,
@@ -108,6 +108,6 @@ def create_app():
     # Create tables
     with app.app_context():
         db.create_all()
-        app.logger.info("Database tables created/verified")
+        logger.info("Database tables created/verified")
     
     return app

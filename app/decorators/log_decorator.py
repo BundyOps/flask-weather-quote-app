@@ -2,8 +2,10 @@
 import time
 import functools
 import uuid
+import json
+import logging
 from flask import request, g, has_request_context, current_app
-from app.logger import get_logger, get_access_logger, get_security_logger, get_business_logger, get_auth_logger
+from app.logger import get_logger
 
 def mask_sensitive_data(data, sensitive_fields=None):
     """Mask sensitive fields in data"""
@@ -67,24 +69,13 @@ def log_route(
     audit=False,
     event_type=None
 ):
-    """
-    Comprehensive logging decorator for Flask routes
-    
-    Args:
-        level: Log level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
-        include_request_body: Whether to log request body
-        include_response_body: Whether to log response body
-        mask_sensitive: Whether to mask sensitive data
-        sensitive_fields: List of sensitive field names
-        log_to_security: Also log to security logger
-        log_to_business: Also log to business logger
-        log_to_auth: Also log to auth logger
-        audit: Whether this is an audit-worthy event
-        event_type: Custom event type name
-    """
+    """Comprehensive logging decorator for Flask routes"""
     def decorator(f):
         @functools.wraps(f)
         def wrapped(*args, **kwargs):
+            # Get the app instance from current_app
+            app = current_app._get_current_object()
+            
             # Generate request ID
             if has_request_context():
                 request_id = request.headers.get('X-Request-ID', str(uuid.uuid4()))
@@ -96,12 +87,12 @@ def log_route(
             # Start timer
             start_time = time.time()
             
-            # Get loggers
-            app_logger = get_logger('app')
-            access_logger = get_access_logger()
-            security_logger = get_security_logger() if log_to_security else None
-            business_logger = get_business_logger() if log_to_business else None
-            auth_logger = get_auth_logger() if log_to_auth else None
+            # Get loggers by passing app
+            app_logger = get_logger(app, 'app')
+            access_logger = get_logger(app, 'access')
+            security_logger = get_logger(app, 'security') if log_to_security else None
+            business_logger = get_logger(app, 'business') if log_to_business else None
+            auth_logger = get_logger(app, 'auth') if log_to_auth else None
             
             # Build request context
             context = {
@@ -130,7 +121,6 @@ def log_route(
                     body = request.get_json(silent=True) or {}
                     if mask_sensitive:
                         body = mask_sensitive_data(body, sensitive_fields)
-                        # Mask emails in body
                         if isinstance(body, dict):
                             for key in ['email', 'username']:
                                 if key in body and '@' in str(body[key]):
@@ -184,7 +174,7 @@ def log_route(
                     }
                 }
                 
-                # Add response body if needed and available
+                # Add response body if needed
                 if include_response_body and response and hasattr(response, 'get_json'):
                     try:
                         body = response.get_json()
@@ -212,8 +202,7 @@ def log_route(
                     }
                     if error:
                         security_data['error'] = str(error)
-                    if log_to_security:
-                        security_logger.warning(json.dumps(security_data))
+                    security_logger.warning(json.dumps(security_data))
                 
                 # Log to business logger if requested
                 if business_logger and log_to_business:

@@ -1,16 +1,15 @@
 # app/routes.py
-from flask import request, jsonify, current_app
+from flask import request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from app.utils import get_weather, get_random_quote
 from app.models import User
 from app.decorators.log_decorator import log_route
-from app.logger import get_logger, get_business_logger
+from app.logger import get_logger
 import time
+from sqlalchemy import text
 
 def register_routes(app):
     """Register all routes with the app"""
-    
-    # === PUBLIC ROUTES ===
     
     @app.route('/my-ip', methods=['GET'])
     @log_route(
@@ -37,16 +36,16 @@ def register_routes(app):
     )
     def health_check():
         """Health check endpoint (public)"""
-        # Check database connection
         try:
             from app.models import db
-            db.session.execute('SELECT 1')
+            db.session.execute(text('SELECT 1'))
             status = 'healthy'
             db_status = 'connected'
         except Exception as e:
             status = 'unhealthy'
             db_status = 'disconnected'
-            current_app.logger.error(f"Health check failed: {e}")
+            # ✅ Use 'app' directly - we have it!
+            app.logger.error(f"Health check failed: {e}")
         
         return jsonify({
             'status': status,
@@ -60,8 +59,6 @@ def register_routes(app):
         """Serve favicon.ico"""
         return '', 204
     
-    # === PROTECTED ROUTES ===
-    
     @app.route('/api/weather', methods=['GET'])
     @log_route(
         level='INFO',
@@ -72,7 +69,8 @@ def register_routes(app):
     @jwt_required()
     def protected_weather():
         """Get weather with user info (protected)"""
-        business_logger = get_business_logger()
+        # ✅ Pass app to get_logger
+        business_logger = get_logger(app, 'business')
         
         try:
             user_id = get_jwt_identity()
@@ -81,7 +79,6 @@ def register_routes(app):
             if not user:
                 return jsonify({'error': 'User not found'}), 404
             
-            # Set user context for logging
             request.user_id = user.id
             request.username = user.username
             
@@ -89,7 +86,6 @@ def register_routes(app):
             if not location:
                 return jsonify({'error': 'Location parameter is required'}), 400
             
-            # Log the request
             business_logger.info({
                 'event': 'WEATHER_REQUEST_START',
                 'user_id': user.id,
@@ -114,7 +110,6 @@ def register_routes(app):
                 })
                 return jsonify(weather_data), 404
             
-            # Add who requested it
             weather_data['requested_by'] = user.username
             
             business_logger.info({
@@ -130,7 +125,8 @@ def register_routes(app):
             return jsonify(weather_data), 200
             
         except Exception as e:
-            current_app.logger.error(f"Weather error: {str(e)}")
+            # ✅ Use 'app' directly
+            app.logger.error(f"Weather error: {str(e)}")
             return jsonify({'error': 'Failed to get weather'}), 500
     
     @app.route('/api/quotes', methods=['GET'])
@@ -143,7 +139,8 @@ def register_routes(app):
     @jwt_required()
     def protected_quote():
         """Return a random quote (protected)"""
-        business_logger = get_business_logger()
+        # ✅ Pass app to get_logger
+        business_logger = get_logger(app, 'business')
         
         try:
             user_id = get_jwt_identity()
@@ -152,7 +149,6 @@ def register_routes(app):
             if not user:
                 return jsonify({'error': 'User not found'}), 404
             
-            # Set user context for logging
             request.user_id = user.id
             request.username = user.username
             
@@ -169,10 +165,9 @@ def register_routes(app):
             return jsonify(quote_data)
             
         except Exception as e:
-            current_app.logger.error(f"Quote error: {str(e)}")
+            # ✅ Use 'app' directly
+            app.logger.error(f"Quote error: {str(e)}")
             return jsonify({'error': 'Failed to get quote'}), 500
-    
-    # === CRASH ROUTE (debug only) ===
     
     if app.debug:
         @app.route('/crash')

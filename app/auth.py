@@ -1,5 +1,5 @@
 # app/auth.py
-from flask import request, jsonify, current_app
+from flask import request, jsonify
 from flask_jwt_extended import (
     create_access_token,
     create_refresh_token,
@@ -8,7 +8,7 @@ from flask_jwt_extended import (
 )
 from app.models import db, User
 from app.decorators.log_decorator import log_route
-from app.logger import get_logger, get_auth_logger, get_security_logger
+from app.logger import get_logger
 
 def register_auth_routes(app):
     """Register all authentication routes"""
@@ -26,8 +26,9 @@ def register_auth_routes(app):
     )
     def register():
         """Register a new user"""
-        logger = get_auth_logger()
-        security_logger = get_security_logger()
+        # ✅ Pass app to get_logger
+        logger = get_logger(app, 'auth')
+        security_logger = get_logger(app, 'security')
         
         try:
             data = request.get_json()
@@ -40,7 +41,6 @@ def register_auth_routes(app):
                 if field not in data:
                     return jsonify({'error': f'Missing field: {field}'}), 400
             
-            # Check existing user
             if User.query.filter_by(username=data['username']).first():
                 security_logger.warning({
                     'event': 'REGISTRATION_FAILED',
@@ -61,7 +61,6 @@ def register_auth_routes(app):
                 })
                 return jsonify({'error': 'Email already registered'}), 409
             
-            # Create user
             user = User(
                 username=data['username'],
                 email=data['email']
@@ -70,11 +69,9 @@ def register_auth_routes(app):
             db.session.add(user)
             db.session.commit()
             
-            # Create tokens
             access_token = create_access_token(identity=str(user.id))
             refresh_token = create_refresh_token(identity=str(user.id))
             
-            # Log success
             logger.info({
                 'event': 'REGISTRATION_SUCCESS',
                 'user_id': user.id,
@@ -100,7 +97,8 @@ def register_auth_routes(app):
             return jsonify({'error': str(e)}), 400
         except Exception as e:
             db.session.rollback()
-            current_app.logger.error(f"Registration error: {str(e)}")
+            # ✅ Use 'app' directly
+            app.logger.error(f"Registration error: {str(e)}")
             return jsonify({'error': 'Registration failed'}), 500
     
     @app.route('/api/auth/login', methods=['POST'])
@@ -116,8 +114,9 @@ def register_auth_routes(app):
     )
     def login():
         """Login user and return tokens"""
-        logger = get_auth_logger()
-        security_logger = get_security_logger()
+        # ✅ Pass app to get_logger
+        logger = get_logger(app, 'auth')
+        security_logger = get_logger(app, 'security')
         
         try:
             data = request.get_json()
@@ -156,11 +155,9 @@ def register_auth_routes(app):
                 })
                 return jsonify({'error': 'Invalid credentials'}), 401
             
-            # Create tokens
             access_token = create_access_token(identity=str(user.id))
             refresh_token = create_refresh_token(identity=str(user.id))
             
-            # Log success
             logger.info({
                 'event': 'LOGIN_SUCCESS',
                 'user_id': user.id,
@@ -177,7 +174,8 @@ def register_auth_routes(app):
             }), 200
             
         except Exception as e:
-            current_app.logger.error(f"Login error: {str(e)}")
+            # ✅ Use 'app' directly
+            app.logger.error(f"Login error: {str(e)}")
             return jsonify({'error': 'Login failed'}), 500
     
     @app.route('/api/auth/refresh', methods=['POST'])
@@ -191,7 +189,8 @@ def register_auth_routes(app):
     @jwt_required(refresh=True)
     def refresh():
         """Get new access token using refresh token"""
-        logger = get_auth_logger()
+        # ✅ Pass app to get_logger
+        logger = get_logger(app, 'auth')
         
         try:
             user_id = get_jwt_identity()
@@ -215,7 +214,8 @@ def register_auth_routes(app):
             }), 200
             
         except Exception as e:
-            current_app.logger.error(f"Refresh error: {str(e)}")
+            # ✅ Use 'app' directly
+            app.logger.error(f"Refresh error: {str(e)}")
             return jsonify({'error': 'Refresh failed'}), 500
     
     @app.route('/api/auth/me', methods=['GET'])
@@ -242,5 +242,6 @@ def register_auth_routes(app):
             return jsonify(user.to_dict()), 200
             
         except Exception as e:
-            current_app.logger.error(f"Get user error: {str(e)}")
+            # ✅ Use 'app' directly
+            app.logger.error(f"Get user error: {str(e)}")
             return jsonify({'error': 'Failed to get user'}), 500
