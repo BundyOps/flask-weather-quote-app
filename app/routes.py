@@ -10,7 +10,45 @@ from sqlalchemy import text
 
 def register_routes(app):
     """Register all routes with the app"""
+
+
+    @app.route('/test', methods=['GET'])
+    def test_check():
+        """Test check endpoint (public)"""
+        logger = get_logger(app, 'auth')
+        logger.warning({
+                'event': 'TEST_EVENT'
+        })
+        logger.warning("Test message!")
+
+        try:
+            from app.models import db
+            db.session.execute(text('SELECT 1'))
+            status = 'healthy'
+            db_status = 'connected'
+        except Exception as e:
+            status = 'unhealthy'
+            db_status = 'disconnected'
+            # ✅ Use 'app' directly - we have it!
+            app.logger.error(f"Health check failed: {e}")
+        
+        return jsonify({
+            'This is test': 'true',
+            'status': status,
+            'database': db_status,
+            'timestamp': time.time()
+        }), 200 if status == 'healthy' else 503
     
+    
+
+
+
+
+
+
+
+
+
     @app.route('/my-ip', methods=['GET'])
     @log_route(
         level='INFO',

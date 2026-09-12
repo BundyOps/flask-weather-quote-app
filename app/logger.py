@@ -43,21 +43,18 @@ class JSONFormatter(logging.Formatter):
         
         return json.dumps(log_data)
 
+# app/logger.py
 def setup_logging(app):
     """Configure logging for the application"""
     
-    # Create logs directory
     log_dir = 'logs'
     if not os.path.exists(log_dir):
         os.makedirs(log_dir)
     
-    # Remove default handlers
     app.logger.handlers.clear()
-    
-    # Set log level from config
     log_level = logging.DEBUG if app.debug else logging.INFO
     
-    # 1. Main app log (everything)
+    # 1. Main app log
     app_handler = logging.handlers.RotatingFileHandler(
         os.path.join(log_dir, 'app.log'),
         maxBytes=10_000_000,
@@ -66,8 +63,9 @@ def setup_logging(app):
     app_handler.setLevel(log_level)
     app_handler.setFormatter(JSONFormatter())
     app.logger.addHandler(app_handler)
+    app.logger.setLevel(log_level)  # ✅ SET LOGGER LEVEL
     
-    # 2. Access log (requests only)
+    # 2. Access log
     access_logger = logging.getLogger('access')
     access_logger.handlers.clear()
     access_handler = logging.handlers.RotatingFileHandler(
@@ -78,9 +76,10 @@ def setup_logging(app):
     access_handler.setLevel(logging.INFO)
     access_handler.setFormatter(JSONFormatter())
     access_logger.addHandler(access_handler)
+    access_logger.setLevel(logging.INFO)  # ✅ SET LOGGER LEVEL
     access_logger.propagate = False
     
-    # 3. Security log (auth events)
+    # 3. Security log
     security_logger = logging.getLogger('security')
     security_logger.handlers.clear()
     security_handler = logging.handlers.RotatingFileHandler(
@@ -91,9 +90,10 @@ def setup_logging(app):
     security_handler.setLevel(logging.INFO)
     security_handler.setFormatter(JSONFormatter())
     security_logger.addHandler(security_handler)
+    security_logger.setLevel(logging.INFO)  # ✅ SET LOGGER LEVEL
     security_logger.propagate = False
     
-    # 4. Business log (weather, quotes)
+    # 4. Business log
     business_logger = logging.getLogger('business')
     business_logger.handlers.clear()
     business_handler = logging.handlers.RotatingFileHandler(
@@ -104,9 +104,10 @@ def setup_logging(app):
     business_handler.setLevel(logging.INFO)
     business_handler.setFormatter(JSONFormatter())
     business_logger.addHandler(business_handler)
+    business_logger.setLevel(logging.INFO)  # ✅ SET LOGGER LEVEL
     business_logger.propagate = False
     
-    # 5. Auth log (authentication)
+    # 5. Auth log - ✅ THIS IS THE ONE THAT WAS BROKEN
     auth_logger = logging.getLogger('auth')
     auth_logger.handlers.clear()
     auth_handler = logging.handlers.RotatingFileHandler(
@@ -117,9 +118,10 @@ def setup_logging(app):
     auth_handler.setLevel(logging.INFO)
     auth_handler.setFormatter(JSONFormatter())
     auth_logger.addHandler(auth_handler)
+    auth_logger.setLevel(logging.INFO)  # ✅ SET LOGGER LEVEL - THIS WAS MISSING!
     auth_logger.propagate = False
     
-    # 6. Error log (errors only)
+    # 6. Error log
     error_logger = logging.getLogger('error')
     error_logger.handlers.clear()
     error_handler = logging.handlers.RotatingFileHandler(
@@ -130,9 +132,10 @@ def setup_logging(app):
     error_handler.setLevel(logging.ERROR)
     error_handler.setFormatter(JSONFormatter())
     error_logger.addHandler(error_handler)
+    error_logger.setLevel(logging.ERROR)  # ✅ SET LOGGER LEVEL
     error_logger.propagate = False
     
-    # 7. Console handler (for development)
+    # 7. Console handler
     console_handler = logging.StreamHandler()
     console_handler.setLevel(log_level)
     console_format = logging.Formatter(
