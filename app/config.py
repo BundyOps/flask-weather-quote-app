@@ -7,7 +7,7 @@ load_dotenv()
 
 class Config:
     # Flask
-    SECRET_KEY = os.getenv('SECRET_KEY', 'dev-secret-key')
+    SECRET_KEY = os.getenv('SECRET_KEY', 'dev-secret-key-change-in-production')
     DEBUG = os.getenv('DEBUG', False)
     
     # Database
@@ -26,7 +26,7 @@ class Config:
     WEATHER_API_URL = 'http://api.openweathermap.org/data/2.5/weather'
     
     # JWT Settings
-    JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY', 'jwt-secret-key')
+    JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY', 'jwt-secret-key-change-in-production')
     JWT_ACCESS_TOKEN_EXPIRES = timedelta(minutes=15)
     JWT_REFRESH_TOKEN_EXPIRES = timedelta(days=30)
     JWT_TOKEN_LOCATION = ['headers']
