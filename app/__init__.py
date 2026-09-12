@@ -1,12 +1,12 @@
 # app/__init__.py
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request, g
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
-import logging
-import os
+import uuid
 
 from app.config import Config
 from app.models import db, bcrypt
+from app.logger import setup_logging, get_logger
 from app.auth import register_auth_routes
 from app.routes import register_routes
 
@@ -29,17 +29,24 @@ def create_app():
     CORS(app)
     
     # Setup logging
-    if not os.path.exists('logs'):
-        os.makedirs('logs')
+    setup_logging(app)
     
-    logging.basicConfig(
-        level=logging.INFO,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-        handlers=[
-            logging.FileHandler('logs/app.log'),
-            logging.StreamHandler()
-        ]
-    )
+    # Get logger by passing app
+    logger = get_logger(app, 'app')
+    logger.info("Application starting up")
+    
+    # Request ID middleware
+    @app.before_request
+    def set_request_id():
+        request_id = request.headers.get('X-Request-ID', str(uuid.uuid4()))
+        g.request_id = request_id
+        request.request_id = request_id
+    
+    # User context middleware
+    @app.before_request
+    def set_user_context():
+        request.user_id = None
+        request.username = None
     
     # Register routes
     register_routes(app)
@@ -48,29 +55,65 @@ def create_app():
     # JWT error handlers
     @jwt.unauthorized_loader
     def unauthorized_response(callback):
+        sec_logger = get_logger(app, 'security')
+        sec_logger.warning({
+            'event': 'UNAUTHORIZED_ACCESS',
+            'path': request.path,
+            'ip': request.remote_addr,
+            'request_id': getattr(request, 'request_id', None)
+        })
         return jsonify({'error': 'Missing or invalid token'}), 401
     
     @jwt.invalid_token_loader
     def invalid_token_response(callback):
+        sec_logger = get_logger(app, 'security')
+        sec_logger.warning({
+            'event': 'INVALID_TOKEN',
+            'path': request.path,
+            'ip': request.remote_addr,
+            'request_id': getattr(request, 'request_id', None)
+        })
         return jsonify({'error': 'Invalid token'}), 401
     
     @jwt.expired_token_loader
     def expired_token_response(callback):
+        sec_logger = get_logger(app, 'security')
+        sec_logger.warning({
+            'event': 'EXPIRED_TOKEN',
+            'path': request.path,
+            'ip': request.remote_addr,
+            'request_id': getattr(request, 'request_id', None)
+        })
         return jsonify({'error': 'Token has expired'}), 401
     
     # Global error handlers
     @app.errorhandler(404)
     def not_found(error):
+        err_logger = get_logger(app, 'error')
+        err_logger.error({
+            'event': 'NOT_FOUND',
+            'path': request.path,
+            'method': request.method,
+            'ip': request.remote_addr,
+            'request_id': getattr(request, 'request_id', None)
+        })
         return jsonify({'error': 'Resource not found'}), 404
     
     @app.errorhandler(500)
     def internal_error(error):
-        app.logger.error(f"Server error: {error}")
+        err_logger = get_logger(app, 'error')
+        err_logger.error({
+            'event': 'INTERNAL_ERROR',
+            'path': request.path,
+            'method': request.method,
+            'error': str(error),
+            'request_id': getattr(request, 'request_id', None)
+        })
         return jsonify({'error': 'Internal server error'}), 500
     
     # Create tables (if they don't exist)
     with app.app_context():
         db.create_all()
-        app.logger.info("Database tables created/verified")
+        logger.info("Database tables created/verified")
     
     return app

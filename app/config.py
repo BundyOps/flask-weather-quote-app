@@ -10,11 +10,8 @@ class Config:
     SECRET_KEY = os.getenv('SECRET_KEY', 'dev-secret-key-change-in-production')
     DEBUG = os.getenv('DEBUG', False)
     
-    # Database - Switch to PostgreSQL
-    # Comment out SQLite, use PostgreSQL
-    SQLALCHEMY_DATABASE_URI = os.getenv('DATABASE_URL', 
-        'postgresql://myuser:mypassword@localhost:5432/myapp_db'
-    )
+    # Database
+    SQLALCHEMY_DATABASE_URI = os.getenv('DATABASE_URL')
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     
     # PostgreSQL connection pool settings (optional but recommended)
